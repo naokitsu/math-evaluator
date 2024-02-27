@@ -115,16 +115,18 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) {
 pub fn eval(expression: impl Iterator<Item = char>, state: &State) -> Result<i32, Error> {
     let tokens = TokenIterator { inner: expression.peekable() };
 
-    let mut nodes = Vec::new();
-    let mut operations = Vec::new();
+    let mut nodes: Vec<Node> = Vec::new();
+    let mut operations: Vec<Operation> = Vec::new();
 
     let mut expect_operand = true;
     for token in tokens {
+        let to_be_pushed;
         match (token, expect_operand) {
             (Token::Operand(OperandsToken::Constant(number)), true) => {
                 nodes.push(Node::Constant {
                     value: number
                 });
+                to_be_pushed = None;
                 expect_operand = false;
             }
             (Token::Operand(OperandsToken::Variable(name)), true) => {
@@ -133,60 +135,66 @@ pub fn eval(expression: impl Iterator<Item = char>, state: &State) -> Result<i32
                         name
                     }
                 );
+                to_be_pushed = None;
                 expect_operand = false;
             }
             (Token::Operation(OperationToken::Plus), true)  => {
-                operations.push(Operation::UnaryPlus);
+                to_be_pushed = Some(Operation::UnaryPlus);
                 expect_operand = true;
             }
             (Token::Operation(OperationToken::Plus), false)  => {
-                operations.push(Operation::BinaryPlus);
+                to_be_pushed = Some(Operation::BinaryPlus);
                 expect_operand = true;
             }
             (Token::Operation(OperationToken::Minus), true) => {
-                operations.push(Operation::UnaryMinus);
+                to_be_pushed = Some(Operation::UnaryMinus);
                 expect_operand = true;
             },
             (Token::Operation(OperationToken::Minus), false) => {
-                operations.push(Operation::BinaryMinus);
+                to_be_pushed = Some(Operation::BinaryMinus);
                 expect_operand = true;
             },
             (Token::Operation(OperationToken::Multiply), false) => {
-                operations.push(Operation::Multiply);
+                to_be_pushed = Some(Operation::Multiply);
                 expect_operand = true;
             },
             (Token::Operation(OperationToken::Divide), false) => {
-                operations.push(Operation::Divide);
+                to_be_pushed = Some(Operation::Divide);
                 expect_operand = true;
             },
             (Token::OpenParenthesis, true) => {
+                to_be_pushed = None;
                 todo!()
             },
             (Token::CloseParenthesis, false) => {
+                to_be_pushed = None;
                 todo!()
             },
             (x, y) => {
+                to_be_pushed = None;
                 println!("{:?} {:?}", x, y);
                 todo!("Unexpected")
             }
         }
 
-        if operations.len() <= 2 {
-            continue;
-        }
-        if let Some(x) = operations.get(operations.len() - 1) {
-            if let Some(y) = operations.get(operations.len() - 2) {
-                if *x > *y {
-                    let operation = operations.pop().unwrap();
-                    collapse(operation, &mut nodes)
-                }
+        //println!("{:?} {:?}", nodes, operations);
+
+        if let (Some(&x), Some(y))= (operations.last(), to_be_pushed) {
+            if x <= y {
+                operations.pop();
+                collapse(x, &mut nodes);
             }
+        }
+
+        if let Some(y) = to_be_pushed {
+            operations.push(y);
         }
     }
 
     while let Some(operation) = operations.pop() {
         collapse(operation, &mut nodes)
     }
+
 
     nodes.pop().unwrap().calculate(state)
 
