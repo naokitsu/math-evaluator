@@ -4,8 +4,11 @@ use crate::state::State;
 
 #[derive(Debug, Clone)]
 pub(crate) enum Node {
-    Leaf {
-        strategy: fn(&State) -> Result<i32, Error>,
+    Variable {
+        name: String,
+    },
+    Constant {
+        value: i32,
     },
     Unary {
         child: Box<Node>,
@@ -21,7 +24,13 @@ pub(crate) enum Node {
 impl Node {
     pub(crate) fn calculate(&self, state: &State) -> Result<i32, Error> {
         match self {
-            Node::Leaf { strategy } => strategy(state),
+            Node::Variable { name } => {
+                match state.variables.get(name) {
+                    Some(value) => Ok(*value),
+                    None => Err(Error::UninitializedVariable(name.clone())),
+                }
+            },
+            Node::Constant { value } => Ok(*value),
             Node::Unary { child, strategy} => strategy(child, state),
             Node::Binary { left, right, strategy } => strategy(left, right, state),
         }

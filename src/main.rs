@@ -24,6 +24,6 @@ fn main() {
             variables: std::collections::HashMap::new(),
         };
 
-        eval(input.chars(), &state);
+        println!("{:?}", eval(input.chars(), &state));
     }
 }

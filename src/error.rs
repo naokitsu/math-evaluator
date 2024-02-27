@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug)]
-pub(crate) enum Error {
+pub enum Error {
     UninitializedVariable(String),
     InvalidSyntax
 }

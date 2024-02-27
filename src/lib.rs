@@ -1,9 +1,10 @@
 use std::cmp::Ordering;
+use crate::error::Error;
 use crate::node::Node;
 use crate::state::State;
 use crate::token::{OperandsToken, OperationToken, Token, TokenIterator};
 
-mod error;
+pub mod error;
 pub mod state;
 mod node;
 mod tests;
@@ -105,7 +106,7 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) {
     }
 }
 
-pub fn eval(expression: impl Iterator<Item = char>, state: &State) -> i32 {
+pub fn eval(expression: impl Iterator<Item = char>, state: &State) -> Result<i32, Error> {
     let tokens = TokenIterator { inner: expression.peekable() };
 
     let mut nodes = Vec::new();
@@ -115,15 +116,15 @@ pub fn eval(expression: impl Iterator<Item = char>, state: &State) -> i32 {
     for token in tokens {
         match (token, expect_operand) {
             (Token::Operand(OperandsToken::Constant(number)), true) => {
-                nodes.push(Node::Leaf {
-                    strategy: |state| Ok(42)
+                nodes.push(Node::Constant {
+                    value: number
                 });
                 expect_operand = false;
             }
             (Token::Operand(OperandsToken::Variable(name)), true) => {
                 nodes.push(
-                    Node::Leaf {
-                        strategy: |state| Ok(*state.variables.get("TODO").unwrap_or(&0)), // TODO
+                    Node::Variable {
+                        name
                     }
                 );
                 expect_operand = false;
@@ -181,8 +182,6 @@ pub fn eval(expression: impl Iterator<Item = char>, state: &State) -> i32 {
         collapse(operation, &mut nodes)
     }
 
-    println!("{:?}", nodes);
-    println!("{:?}", operations);
+    nodes.pop().unwrap().calculate(state)
 
-    42
 }
