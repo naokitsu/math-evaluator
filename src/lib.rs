@@ -38,6 +38,7 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) {
             nodes.push(
                 Node::Unary {
                     child: Box::new(prev),
+                    sign: '+',
                     strategy: |child, state| Ok(child.calculate(state)?),
                 }
             );
@@ -47,6 +48,7 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) {
             nodes.push(
                 Node::Unary {
                     child: Box::new(prev),
+                    sign: '-',
                     strategy: |child, state| Ok(-child.calculate(state)?),
                 }
             );
@@ -57,6 +59,7 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) {
             nodes.push(Node::Binary {
                 left: Box::new(prev_bot),
                 right: Box::new(prev_top),
+                sign: '+',
                 strategy: |left, right, state| {
                     let l = left.calculate(state)?;
                     let r = right.calculate(state)?;
@@ -70,6 +73,7 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) {
             nodes.push(Node::Binary {
                 left: Box::new(prev_bot),
                 right: Box::new(prev_top),
+                sign: '-',
                 strategy: |left, right, state| {
                     let l = left.calculate(state)?;
                     let r = right.calculate(state)?;
@@ -83,6 +87,7 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) {
             nodes.push(Node::Binary {
                 left: Box::new(prev_bot),
                 right: Box::new(prev_top),
+                sign: '*',
                 strategy: |left, right, state| {
                     let l = left.calculate(state)?;
                     let r = right.calculate(state)?;
@@ -96,6 +101,7 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) {
             nodes.push(Node::Binary {
                 left: Box::new(prev_bot),
                 right: Box::new(prev_top),
+                sign: '/',
                 strategy: |left, right, state| {
                     let l = left.calculate(state)?;
                     let r = right.calculate(state)?;

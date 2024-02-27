@@ -1,8 +1,8 @@
-use std::fmt::{Debug, Display};
+use std::fmt::{Debug, Display, Formatter};
 use crate::error::Error;
 use crate::state::State;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub(crate) enum Node {
     Variable {
         name: String,
@@ -12,11 +12,13 @@ pub(crate) enum Node {
     },
     Unary {
         child: Box<Node>,
+        sign: char,
         strategy: fn(child: &Box<Node>, &State) -> Result<i32, Error>,
     },
     Binary {
         left: Box<Node>,
         right: Box<Node>,
+        sign: char,
         strategy: fn(left: &Box<Node>, right: &Box<Node>, &State) -> Result<i32, Error>,
     },
 }
@@ -31,9 +33,30 @@ impl Node {
                 }
             },
             Node::Constant { value } => Ok(*value),
-            Node::Unary { child, strategy} => strategy(child, state),
-            Node::Binary { left, right, strategy } => strategy(left, right, state),
+            Node::Unary { child, strategy, .. } => strategy(child, state),
+            Node::Binary { left, right, strategy, .. } => strategy(left, right, state),
         }
     }
 }
 
+impl Display for Node {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Node::Variable { name } => write!(f, "{}", name),
+            Node::Constant { value } => write!(f, "{}", value),
+            Node::Unary { child, sign, .. } => write!(f, "({}{})", sign, child),
+            Node::Binary { left, right, sign, .. } => write!(f, "({} {} {})", left, sign, right),
+        }
+    }
+}
+
+impl Debug for Node {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Node::Variable { name } => write!(f, "{}", name),
+            Node::Constant { value } => write!(f, "{}", value),
+            Node::Unary { child, sign, .. } => write!(f, "({}{})", sign, child),
+            Node::Binary { left, right, sign, .. } => write!(f, "({} {} {})", left, sign, right),
+        }
+    }
+}
