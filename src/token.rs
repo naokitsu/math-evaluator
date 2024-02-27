@@ -2,15 +2,25 @@ use std::iter::Peekable;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Token {
+    Operand(OperandsToken),
+    Operation(OperationToken),
+    OpenParenthesis,
+    CloseParenthesis,
+    Unexpected,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum OperandsToken {
+    Variable(String),
+    Constant(i32),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum OperationToken {
     Plus,
     Minus,
     Multiply,
     Divide,
-    OpenParenthesis,
-    CloseParenthesis,
-    Variable(String),
-    Constant(i32),
-    Unexpected,
 }
 
 pub(crate) struct TokenIterator<T>
@@ -34,10 +44,10 @@ impl<T> Iterator for TokenIterator<T>
                         continue;
                     }
                     return match c {
-                        '+' => Some(Token::Plus),
-                        '-' => Some(Token::Minus),
-                        '*' => Some(Token::Multiply),
-                        '/' => Some(Token::Divide),
+                        '+' => Some(Token::Operation(OperationToken::Plus)),
+                        '-' => Some(Token::Operation(OperationToken::Minus)),
+                        '*' => Some(Token::Operation(OperationToken::Multiply)),
+                        '/' => Some(Token::Operation(OperationToken::Divide)),
                         '(' => Some(Token::OpenParenthesis),
                         ')' => Some(Token::CloseParenthesis),
                         '0'..='9' | 'a'..='z' | 'A'..='Z' => {
@@ -56,11 +66,11 @@ impl<T> Iterator for TokenIterator<T>
                             }
                             if constant {
                                 match word.parse() {
-                                    Ok(number) => Some(Token::Constant(number)),
+                                    Ok(number) => Some(Token::Operand(OperandsToken::Constant(number))),
                                     Err(_) => Some(Token::Unexpected),
                                 }
                             } else {
-                                Some(Token::Variable(word))
+                                Some(Token::Operand(OperandsToken::Variable(word)))
                             }
                         },
                         _ => Some(Token::Unexpected),

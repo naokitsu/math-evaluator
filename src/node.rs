@@ -3,7 +3,7 @@ use crate::error::Error;
 use crate::state::State;
 
 #[derive(Debug, Clone)]
-enum Node {
+pub(crate) enum Node {
     Leaf {
         strategy: fn(&State) -> Result<i32, Error>,
     },
@@ -19,7 +19,7 @@ enum Node {
 }
 
 impl Node {
-    fn calculate(&self, state: &State) -> Result<i32, Error> {
+    pub(crate) fn calculate(&self, state: &State) -> Result<i32, Error> {
         match self {
             Node::Leaf { strategy } => strategy(state),
             Node::Unary { child, strategy} => strategy(child, state),
