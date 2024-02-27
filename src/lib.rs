@@ -1,6 +1,7 @@
 mod error;
 mod state;
 mod node;
+mod tests;
 
 pub fn eval(expression: impl Iterator<Item = char>) -> i32 {
     for character in expression {
