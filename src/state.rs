@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct State {
-    variables: HashMap<String, i32>,
+    pub variables: HashMap<String, i32>,
 }
