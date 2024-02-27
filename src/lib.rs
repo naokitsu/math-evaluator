@@ -1,7 +1,7 @@
 use crate::state::State;
 
 mod error;
-mod state;
+pub mod state;
 mod node;
 mod tests;
 
