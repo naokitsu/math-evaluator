@@ -1,3 +1,5 @@
+mod error;
+
 pub fn eval(expression: impl Iterator<Item = char>) -> i32 {
     for character in expression {
         println!("{}",character);
