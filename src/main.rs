@@ -1,5 +1,5 @@
 use std::io::Write;
-use math_evaluator::eval;
+use math_evaluator::evaluator::eval;
 use math_evaluator::state::State;
 
 fn main() {
