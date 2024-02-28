@@ -24,6 +24,7 @@ pub enum OperationToken {
     Assign,
 }
 
+/// An iterator wrapper for iterator of `char`, essentially a lexer
 pub(crate) struct TokenIterator<T>
     where
         T: Iterator<Item = char>
@@ -39,12 +40,12 @@ impl<T> Iterator for TokenIterator<T>
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            match self.inner.next() {
+            return match self.inner.next() {
                 Some(c) => {
                     if c.is_ascii_whitespace() {
                         continue;
                     }
-                    return match c {
+                    match c {
                         '+' => Some(Token::Operation(OperationToken::Plus)),
                         '-' => Some(Token::Operation(OperationToken::Minus)),
                         '*' => Some(Token::Operation(OperationToken::Multiply)),
@@ -78,7 +79,7 @@ impl<T> Iterator for TokenIterator<T>
                         _ => Some(Token::Unexpected),
                     }
                 },
-                None => return None,
+                None => None,
             }
         }
     }

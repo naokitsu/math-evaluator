@@ -36,6 +36,7 @@ impl PartialOrd for Operation {
     }
 }
 
+/// Pop one/two node(s) from the node list and add put new operation node inside
 fn collapse(operation: Operation, nodes: &mut Vec<Node>) -> Result<(), Error> {
     match operation {
         Operation::UnaryPlus => {
@@ -134,7 +135,7 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) -> Result<(), Error> {
                 sign: '=',
                 strategy: |left, right, state| {
                     let l = left;
-                    let r = right.calculate(state)?;
+                    let r = right.eval(state)?; // eval right before left
                     if let Node::Variable { name } = l.deref() {
                         state.variables.insert(name.clone(), r);
                         Ok(r)
@@ -148,6 +149,7 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) -> Result<(), Error> {
     Ok(())
 }
 
+/// Evaluate expression from the iterator
 pub fn eval(expression: impl Iterator<Item = char>, state: &mut State) -> Result<i32, Error> {
     let tokens = TokenIterator { inner: expression.peekable() };
 

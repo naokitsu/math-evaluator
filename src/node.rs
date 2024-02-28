@@ -2,6 +2,7 @@ use std::fmt::{Debug, Display, Formatter};
 use crate::error::Error;
 use crate::state::State;
 
+/// Operation nodes for parser tree
 #[derive(Clone)]
 pub(crate) enum Node {
     Variable {
@@ -27,7 +28,8 @@ pub(crate) enum Node {
 }
 
 impl Node {
-    pub(crate) fn calculate(&self, state: &mut State) -> Result<i32, Error> {
+    /// Evaluates the value of the node
+    pub(crate) fn eval(&self, state: &mut State) -> Result<i32, Error> {
         match self {
             Node::Variable { name } => {
                 match state.variables.get(name) {
@@ -38,7 +40,7 @@ impl Node {
             Node::Constant { value } => Ok(*value),
             Node::Unary { child, strategy, .. } => strategy(child, state),
             Node::Binary { left, right, strategy, .. } => strategy(left, right, state),
-            Node::Parenthesis {child, ..} => child.calculate(state),
+            Node::Parenthesis {child, ..} => child.eval(state),
         }
     }
 }
