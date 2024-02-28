@@ -1,5 +1,7 @@
 use std::cmp::Ordering;
+use std::ops::{Deref, DerefMut};
 use crate::error::Error;
+use crate::error::Error::CanOnlyAssignToVariable;
 use crate::node::Node;
 use crate::state::State;
 use crate::token::{OperandsToken, OperationToken, Token, TokenIterator};
@@ -20,6 +22,7 @@ enum Operation {
     Divide,
     OpenParenthesis,
     CloseParenthesis,
+    Assign,
 }
 
 impl PartialOrd for Operation {
@@ -29,13 +32,13 @@ impl PartialOrd for Operation {
             (Operation::Multiply | Operation::Divide, Operation::Multiply | Operation::Divide) => Some(Ordering::Equal),
             (Operation::UnaryPlus | Operation::BinaryPlus | Operation::UnaryMinus | Operation::BinaryMinus, Operation::Multiply | Operation::Divide) => Some(Ordering::Greater),
             (Operation::Multiply | Operation::Divide, Operation::UnaryPlus | Operation::BinaryPlus | Operation::UnaryMinus | Operation::BinaryMinus) => Some(Ordering::Less),
-            (Operation::CloseParenthesis, Operation::OpenParenthesis) => Some(Ordering::Less),
-            (Operation::OpenParenthesis, Operation::CloseParenthesis) => None,
-            (Operation::CloseParenthesis, Operation::OpenParenthesis) => None,
+            (Operation::OpenParenthesis, Operation::CloseParenthesis) => Some(Ordering::Equal),
+            (Operation::CloseParenthesis, Operation::OpenParenthesis) => Some(Ordering::Equal),
             (Operation::OpenParenthesis, _) => Some(Ordering::Greater),
             (Operation::CloseParenthesis, _) => Some(Ordering::Less),
             (_, Operation::OpenParenthesis) => Some(Ordering::Greater),
             (_, Operation::CloseParenthesis) => Some(Ordering::Less),
+            (Operation::Assign, _) => Some(Ordering::Greater),
             _ => todo!(),
         }
     }
@@ -129,19 +132,38 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) {
             );
         },
         Operation::CloseParenthesis => {
-            unreachable!()
+
+        },
+        Operation::Assign => {
+            let prev_top = nodes.pop().unwrap();
+            let prev_bot = nodes.pop().unwrap();
+            nodes.push(Node::Binary {
+                left: Box::new(prev_bot),
+                right: Box::new(prev_top),
+                sign: '=',
+                strategy: |left, right, mut state| {
+                    let l = left;
+                    let r = right.calculate(state)?;
+                    if let Node::Variable { name } = l.deref() {
+                        state.variables.insert(name.clone(), r);
+                        Ok(r)
+                    } else {
+                       Err(CanOnlyAssignToVariable)
+                    }
+                },
+            });
         }
     }
 }
 
-pub fn eval(expression: impl Iterator<Item = char>, state: &State) -> Result<i32, Error> {
+pub fn eval(expression: impl Iterator<Item = char>, state: &mut State) -> Result<i32, Error> {
     let tokens = TokenIterator { inner: expression.peekable() };
 
     let mut nodes: Vec<Node> = Vec::new();
     let mut operations: Vec<Operation> = Vec::new();
 
     let mut expect_operand = true;
-    for token in tokens {
+    'outer: for token in tokens {
         let to_be_pushed;
         match (token, expect_operand) {
             (Token::Operand(OperandsToken::Constant(number)), true) => {
@@ -189,9 +211,14 @@ pub fn eval(expression: impl Iterator<Item = char>, state: &State) -> Result<i32
                 expect_operand = true;
             },
             (Token::CloseParenthesis, false) => {
-                to_be_pushed = None;
+                to_be_pushed = Some(Operation::CloseParenthesis);
                 expect_operand = false;
             },
+            (Token::Operation(OperationToken::Assign), false) => {
+                to_be_pushed = Some(Operation::Assign);
+                expect_operand = true;
+            }
+
             (x, y) => {
                 to_be_pushed = None;
                 println!("{:?} {:?}", x, y);
@@ -199,19 +226,34 @@ pub fn eval(expression: impl Iterator<Item = char>, state: &State) -> Result<i32
             }
         }
 
-        println!("{:?} {:?}", nodes, operations);
-
-        if let (Some(&x), Some(y))= (operations.last(), to_be_pushed) {
-            let cmp =  x.partial_cmp(&y);
-            if let Some(Ordering::Less) | Some(Ordering::Equal) | None = cmp {
+        while let (Some(&x), Some(y)) = (operations.last(), to_be_pushed) {
+            if let (Operation::OpenParenthesis, Operation::CloseParenthesis) = (x, y) {
+                operations.pop();
+                continue 'outer;
+            }
+            if x <= y {
                 operations.pop();
                 collapse(x, &mut nodes);
-                if (cmp.is_none()) {
-                    continue;
-                }
+            } else {
+                break;
             }
         }
 
+        match (operations.last(), to_be_pushed) {
+            (Some(Operation::OpenParenthesis), Some(Operation::CloseParenthesis)) => {
+                operations.pop();
+                collapse(Operation::CloseParenthesis, &mut nodes);
+                continue;
+            }
+            (Some(&x), Some(y)) => {
+                while x <= y {
+                    operations.pop();
+                    collapse(x, &mut nodes);
+                }
+
+            },
+            _ => {}
+        }
         if let Some(y) = to_be_pushed {
             operations.push(y);
         }
@@ -222,6 +264,6 @@ pub fn eval(expression: impl Iterator<Item = char>, state: &State) -> Result<i32
     }
 
 
-    nodes.pop().unwrap().calculate(state)
+    nodes.pop().ok_or(Error::InvalidSyntax)?.calculate(state)
 
 }

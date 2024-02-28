@@ -3,7 +3,8 @@ use std::fmt::{Debug, Display, Formatter};
 #[derive(Debug)]
 pub enum Error {
     UninitializedVariable(String),
-    InvalidSyntax
+    InvalidSyntax,
+    CanOnlyAssignToVariable,
 }
 
 impl Display for Error {
@@ -14,6 +15,9 @@ impl Display for Error {
             }
             Error::InvalidSyntax => {
                 write!(f, "Invalid syntax")
+            }
+            Error::CanOnlyAssignToVariable => {
+                write!(f, "Can only assign to variable")
             }
         }
     }

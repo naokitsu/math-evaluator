@@ -3,6 +3,9 @@ use math_evaluator::eval;
 use math_evaluator::state::State;
 
 fn main() {
+    let mut state = State {
+        variables: std::collections::HashMap::new(),
+    };
     loop {
         print!("\n> ");
         if let Err(e) = std::io::stdout().flush() {
@@ -20,11 +23,7 @@ fn main() {
             break;
         }
 
-        let state = State {
-            variables: std::collections::HashMap::new(),
-        };
-
-        let res = eval(input.chars(), &state);
+        let res = eval(input.chars(), &mut state);
         println!("{:?}", res);
     }
 }

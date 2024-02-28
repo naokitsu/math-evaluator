@@ -12,23 +12,23 @@ pub(crate) enum Node {
     },
     Parenthesis {
         child: Box<Node>,
-        strategy: fn(child: &Box<Node>, &State) -> Result<i32, Error>,
+        strategy: fn(child: &Box<Node>, &mut State) -> Result<i32, Error>,
     },
     Unary {
         child: Box<Node>,
         sign: char,
-        strategy: fn(child: &Box<Node>, &State) -> Result<i32, Error>,
+        strategy: fn(child: &Box<Node>, &mut State) -> Result<i32, Error>,
     },
     Binary {
         left: Box<Node>,
         right: Box<Node>,
         sign: char,
-        strategy: fn(left: &Box<Node>, right: &Box<Node>, &State) -> Result<i32, Error>,
+        strategy: fn(left: &Box<Node>, right: &Box<Node>, &mut State) -> Result<i32, Error>,
     },
 }
 
 impl Node {
-    pub(crate) fn calculate(&self, state: &State) -> Result<i32, Error> {
+    pub(crate) fn calculate(&self, state: &mut State) -> Result<i32, Error> {
         match self {
             Node::Variable { name } => {
                 match state.variables.get(name) {
@@ -40,7 +40,6 @@ impl Node {
             Node::Unary { child, strategy, .. } => strategy(child, state),
             Node::Binary { left, right, strategy, .. } => strategy(left, right, state),
             Node::Parenthesis {child, ..} => child.calculate(state),
-
         }
     }
 }

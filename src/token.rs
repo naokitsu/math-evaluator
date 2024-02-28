@@ -21,6 +21,7 @@ pub enum OperationToken {
     Minus,
     Multiply,
     Divide,
+    Assign,
 }
 
 pub(crate) struct TokenIterator<T>
@@ -50,6 +51,7 @@ impl<T> Iterator for TokenIterator<T>
                         '/' => Some(Token::Operation(OperationToken::Divide)),
                         '(' => Some(Token::OpenParenthesis),
                         ')' => Some(Token::CloseParenthesis),
+                        '=' => Some(Token::Operation(OperationToken::Assign)),
                         '0'..='9' | 'a'..='z' | 'A'..='Z' => {
                             let mut word = String::from(c);
                             let constant = match c {
