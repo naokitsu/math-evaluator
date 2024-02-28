@@ -12,7 +12,6 @@ pub(crate) enum Node {
     },
     Parenthesis {
         child: Box<Node>,
-        strategy: fn(child: &Box<Node>, &mut State) -> Result<i32, Error>,
     },
     Unary {
         child: Box<Node>,
@@ -59,11 +58,11 @@ impl Display for Node {
 impl Debug for Node {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Node::Variable { name } => write!(f, "{}", name),
-            Node::Constant { value } => write!(f, "{}", value),
-            Node::Unary { child, sign, .. } => write!(f, "({}{})", sign, child),
-            Node::Binary { left, right, sign, .. } => write!(f, "({} {} {})", left, sign, right),
-            Node::Parenthesis {child, ..} => write!(f, "({})", child),
+            Node::Variable { name } => write!(f, "(Var: {})", name),
+            Node::Constant { value } => write!(f, "(Const: {})", value),
+            Node::Unary { child, sign, .. } => write!(f, "(Unary {}: {})", sign, child),
+            Node::Binary { left, right, sign, .. } => write!(f, "(Binary {}: {}, {})", sign, left, right),
+            Node::Parenthesis {child, ..} => write!(f, "(Nested: {})", child),
         }
     }
 }

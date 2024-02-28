@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::ops::{Deref, DerefMut};
+use std::ops::{Deref};
 use crate::error::Error;
 use crate::error::Error::CanOnlyAssignToVariable;
 use crate::node::Node;
@@ -39,7 +39,7 @@ impl PartialOrd for Operation {
             (_, Operation::OpenParenthesis) => Some(Ordering::Greater),
             (_, Operation::CloseParenthesis) => Some(Ordering::Less),
             (Operation::Assign, _) => Some(Ordering::Greater),
-            _ => todo!(),
+            (_, Operation::Assign) => Some(Ordering::Greater)
         }
     }
 }
@@ -127,7 +127,6 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) {
             nodes.push(
                 Node::Parenthesis {
                     child: Box::new(prev),
-                    strategy: |child, state| Ok(child.calculate(state)?),
                 }
             );
         },
@@ -141,7 +140,7 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) {
                 left: Box::new(prev_bot),
                 right: Box::new(prev_top),
                 sign: '=',
-                strategy: |left, right, mut state| {
+                strategy: |left, right, state| {
                     let l = left;
                     let r = right.calculate(state)?;
                     if let Node::Variable { name } = l.deref() {
@@ -219,10 +218,8 @@ pub fn eval(expression: impl Iterator<Item = char>, state: &mut State) -> Result
                 expect_operand = true;
             }
 
-            (x, y) => {
-                to_be_pushed = None;
-                println!("{:?} {:?}", x, y);
-                todo!("Unexpected")
+            (_, _) => {
+                return Err(Error::InvalidSyntax);
             }
         }
 
