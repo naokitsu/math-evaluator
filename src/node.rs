@@ -10,6 +10,10 @@ pub(crate) enum Node {
     Constant {
         value: i32,
     },
+    Parenthesis {
+        child: Box<Node>,
+        strategy: fn(child: &Box<Node>, &State) -> Result<i32, Error>,
+    },
     Unary {
         child: Box<Node>,
         sign: char,
@@ -35,6 +39,8 @@ impl Node {
             Node::Constant { value } => Ok(*value),
             Node::Unary { child, strategy, .. } => strategy(child, state),
             Node::Binary { left, right, strategy, .. } => strategy(left, right, state),
+            Node::Parenthesis {child, ..} => child.calculate(state),
+
         }
     }
 }
@@ -46,6 +52,7 @@ impl Display for Node {
             Node::Constant { value } => write!(f, "{}", value),
             Node::Unary { child, sign, .. } => write!(f, "({}{})", sign, child),
             Node::Binary { left, right, sign, .. } => write!(f, "({} {} {})", left, sign, right),
+            Node::Parenthesis {child, ..} => write!(f, "({})", child),
         }
     }
 }
@@ -57,6 +64,7 @@ impl Debug for Node {
             Node::Constant { value } => write!(f, "{}", value),
             Node::Unary { child, sign, .. } => write!(f, "({}{})", sign, child),
             Node::Binary { left, right, sign, .. } => write!(f, "({} {} {})", left, sign, right),
+            Node::Parenthesis {child, ..} => write!(f, "({})", child),
         }
     }
 }

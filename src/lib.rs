@@ -18,6 +18,8 @@ enum Operation {
     BinaryMinus,
     Multiply,
     Divide,
+    OpenParenthesis,
+    CloseParenthesis,
 }
 
 impl PartialOrd for Operation {
@@ -27,6 +29,14 @@ impl PartialOrd for Operation {
             (Operation::Multiply | Operation::Divide, Operation::Multiply | Operation::Divide) => Some(Ordering::Equal),
             (Operation::UnaryPlus | Operation::BinaryPlus | Operation::UnaryMinus | Operation::BinaryMinus, Operation::Multiply | Operation::Divide) => Some(Ordering::Greater),
             (Operation::Multiply | Operation::Divide, Operation::UnaryPlus | Operation::BinaryPlus | Operation::UnaryMinus | Operation::BinaryMinus) => Some(Ordering::Less),
+            (Operation::CloseParenthesis, Operation::OpenParenthesis) => Some(Ordering::Less),
+            (Operation::OpenParenthesis, Operation::CloseParenthesis) => None,
+            (Operation::CloseParenthesis, Operation::OpenParenthesis) => None,
+            (Operation::OpenParenthesis, _) => Some(Ordering::Greater),
+            (Operation::CloseParenthesis, _) => Some(Ordering::Less),
+            (_, Operation::OpenParenthesis) => Some(Ordering::Greater),
+            (_, Operation::CloseParenthesis) => Some(Ordering::Less),
+            _ => todo!(),
         }
     }
 }
@@ -108,6 +118,18 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) {
                     Ok(l / r)
                 },
             });
+        },
+        Operation::OpenParenthesis => {
+            let prev = nodes.pop().unwrap();
+            nodes.push(
+                Node::Parenthesis {
+                    child: Box::new(prev),
+                    strategy: |child, state| Ok(child.calculate(state)?),
+                }
+            );
+        },
+        Operation::CloseParenthesis => {
+            unreachable!()
         }
     }
 }
@@ -163,12 +185,12 @@ pub fn eval(expression: impl Iterator<Item = char>, state: &State) -> Result<i32
                 expect_operand = true;
             },
             (Token::OpenParenthesis, true) => {
-                to_be_pushed = None;
-                todo!()
+                to_be_pushed = Some(Operation::OpenParenthesis);
+                expect_operand = true;
             },
             (Token::CloseParenthesis, false) => {
                 to_be_pushed = None;
-                todo!()
+                expect_operand = false;
             },
             (x, y) => {
                 to_be_pushed = None;
@@ -177,12 +199,16 @@ pub fn eval(expression: impl Iterator<Item = char>, state: &State) -> Result<i32
             }
         }
 
-        //println!("{:?} {:?}", nodes, operations);
+        println!("{:?} {:?}", nodes, operations);
 
         if let (Some(&x), Some(y))= (operations.last(), to_be_pushed) {
-            if x <= y {
+            let cmp =  x.partial_cmp(&y);
+            if let Some(Ordering::Less) | Some(Ordering::Equal) | None = cmp {
                 operations.pop();
                 collapse(x, &mut nodes);
+                if (cmp.is_none()) {
+                    continue;
+                }
             }
         }
 
