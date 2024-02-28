@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use crate::{eval, State};
+    use crate::evaluator::eval;
+    use crate::state::State;
 
     #[test]
     fn constant() {
