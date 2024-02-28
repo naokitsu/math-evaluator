@@ -1,7 +1,6 @@
 use std::cmp::Ordering;
 use std::ops::{Deref};
 use crate::error::Error;
-use crate::error::Error::CanOnlyAssignToVariable;
 use crate::node::Node;
 use crate::state::State;
 use crate::token::{OperandsToken, OperationToken, Token, TokenIterator};
@@ -37,20 +36,20 @@ impl PartialOrd for Operation {
     }
 }
 
-fn collapse(operation: Operation, nodes: &mut Vec<Node>) {
+fn collapse(operation: Operation, nodes: &mut Vec<Node>) -> Result<(), Error> {
     match operation {
         Operation::UnaryPlus => {
-            let prev = nodes.pop().unwrap();
+            let prev = nodes.pop().ok_or(Error::InvalidSyntax)?;
             nodes.push(
                 Node::Unary {
                     child: Box::new(prev),
                     sign: '+',
                     strategy: |child, state| Ok(child.calculate(state)?),
                 }
-            );
+            )
         }
         Operation::UnaryMinus => {
-            let prev = nodes.pop().unwrap();
+            let prev = nodes.pop().ok_or(Error::InvalidSyntax)?;
             nodes.push(
                 Node::Unary {
                     child: Box::new(prev),
@@ -60,8 +59,8 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) {
             );
         }
         Operation::BinaryPlus => {
-            let prev_top = nodes.pop().unwrap();
-            let prev_bot = nodes.pop().unwrap();
+            let prev_top = nodes.pop().ok_or(Error::InvalidSyntax)?;
+            let prev_bot = nodes.pop().ok_or(Error::InvalidSyntax)?;
             nodes.push(Node::Binary {
                 left: Box::new(prev_bot),
                 right: Box::new(prev_top),
@@ -74,8 +73,8 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) {
             });
         }
         Operation::BinaryMinus => {
-            let prev_top = nodes.pop().unwrap();
-            let prev_bot = nodes.pop().unwrap();
+            let prev_top = nodes.pop().ok_or(Error::InvalidSyntax)?;
+            let prev_bot = nodes.pop().ok_or(Error::InvalidSyntax)?;
             nodes.push(Node::Binary {
                 left: Box::new(prev_bot),
                 right: Box::new(prev_top),
@@ -88,8 +87,8 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) {
             });
         }
         Operation::Multiply => {
-            let prev_top = nodes.pop().unwrap();
-            let prev_bot = nodes.pop().unwrap();
+            let prev_top = nodes.pop().ok_or(Error::InvalidSyntax)?;
+            let prev_bot = nodes.pop().ok_or(Error::InvalidSyntax)?;
             nodes.push(Node::Binary {
                 left: Box::new(prev_bot),
                 right: Box::new(prev_top),
@@ -102,8 +101,8 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) {
             });
         }
         Operation::Divide => {
-            let prev_top = nodes.pop().unwrap();
-            let prev_bot = nodes.pop().unwrap();
+            let prev_top = nodes.pop().ok_or(Error::InvalidSyntax)?;
+            let prev_bot = nodes.pop().ok_or(Error::InvalidSyntax)?;
             nodes.push(Node::Binary {
                 left: Box::new(prev_bot),
                 right: Box::new(prev_top),
@@ -116,7 +115,7 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) {
             });
         },
         Operation::OpenParenthesis => {
-            let prev = nodes.pop().unwrap();
+            let prev = nodes.pop().ok_or(Error::InvalidSyntax)?;
             nodes.push(
                 Node::Parenthesis {
                     child: Box::new(prev),
@@ -127,8 +126,8 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) {
 
         },
         Operation::Assign => {
-            let prev_top = nodes.pop().unwrap();
-            let prev_bot = nodes.pop().unwrap();
+            let prev_top = nodes.pop().ok_or(Error::InvalidSyntax)?;
+            let prev_bot = nodes.pop().ok_or(Error::InvalidSyntax)?;
             nodes.push(Node::Binary {
                 left: Box::new(prev_bot),
                 right: Box::new(prev_top),
@@ -140,12 +139,13 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) {
                         state.variables.insert(name.clone(), r);
                         Ok(r)
                     } else {
-                        Err(CanOnlyAssignToVariable)
+                        Err(Error::CanOnlyAssignToVariable)
                     }
                 },
             });
         }
     }
+    Ok(())
 }
 
 pub fn eval(expression: impl Iterator<Item = char>, state: &mut State) -> Result<i32, Error> {
@@ -223,7 +223,7 @@ pub fn eval(expression: impl Iterator<Item = char>, state: &mut State) -> Result
             }
             if x <= y {
                 operations.pop();
-                collapse(x, &mut nodes);
+                collapse(x, &mut nodes)?;
             } else {
                 break;
             }
@@ -232,13 +232,13 @@ pub fn eval(expression: impl Iterator<Item = char>, state: &mut State) -> Result
         match (operations.last(), to_be_pushed) {
             (Some(Operation::OpenParenthesis), Some(Operation::CloseParenthesis)) => {
                 operations.pop();
-                collapse(Operation::CloseParenthesis, &mut nodes);
+                collapse(Operation::CloseParenthesis, &mut nodes)?;
                 continue;
             }
             (Some(&x), Some(y)) => {
                 while x <= y {
                     operations.pop();
-                    collapse(x, &mut nodes);
+                    collapse(x, &mut nodes)?;
                 }
 
             },
@@ -250,7 +250,7 @@ pub fn eval(expression: impl Iterator<Item = char>, state: &mut State) -> Result
     }
 
     while let Some(operation) = operations.pop() {
-        collapse(operation, &mut nodes)
+        collapse(operation, &mut nodes)?
     }
 
 

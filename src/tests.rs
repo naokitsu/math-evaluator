@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use crate::error::Error::{CanOnlyAssignToVariable, InvalidSyntax, UninitializedVariable};
     use crate::evaluator::eval;
     use crate::state::State;
 
@@ -115,6 +116,20 @@ mod tests {
         assert_eq!(result, Ok(19));
         let result = eval("x".chars(), &mut state);
         assert_eq!(result, Ok(7));
+    }
+
+    #[test]
+    fn invalid_syntax() {
+        let mut state = State {
+            variables: std::collections::HashMap::new(),
+        };
+
+        let result = eval("x + 1".chars(), &mut state);
+        assert_eq!(result, Err(UninitializedVariable("x".to_string())));
+        let result = eval("2 *** 1".chars(), &mut state);
+        assert_eq!(result, Err(InvalidSyntax));
+        let result = eval("1 = 5".chars(), &mut state);
+        assert_eq!(result, Err(CanOnlyAssignToVariable));
     }
 }
 
