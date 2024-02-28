@@ -51,14 +51,36 @@ mod tests {
         assert_eq!(result, Ok(1));
     }
 
+
     #[test]
-    fn chained_divisions() {
+    fn order_of_operations() {
+        let mut state = State {
+            variables: std::collections::HashMap::new(),
+        };
+
+        let result = eval("10 + 12 * 4".chars(), &mut state);
+        assert_eq!(result, Ok(58));
+        let result = eval("10 * 12 + 4".chars(), &mut state);
+        assert_eq!(result, Ok(124));
+    }
+    #[test]
+    fn chained_operations() {
         let mut state = State {
             variables: std::collections::HashMap::new(),
         };
 
         let result = eval("24 / 8 / 2".chars(), &mut state);
         assert_eq!(result, Ok(1));
+
+        let result = eval("24 / 8 * 2".chars(), &mut state);
+        assert_eq!(result, Ok(6));
+
+        let result = eval("a = 1 + b = 2".chars(), &mut state);
+        assert_eq!(result, Ok(3));
+        let result = eval("a".chars(), &mut state);
+        assert_eq!(result, Ok(3));
+        let result = eval("b".chars(), &mut state);
+        assert_eq!(result, Ok(2));
     }
 
     #[test]
@@ -68,7 +90,7 @@ mod tests {
         };
 
         let result = eval("(12 + 12) * 5 + 2 * 4 ".chars(), &mut state);
-        assert_eq!(result, Ok((12 + 12) * 5 + 2 * 4));
+        assert_eq!(result, Ok(128));
     }
 
     #[test]
@@ -81,7 +103,6 @@ mod tests {
         assert_eq!(result, Ok(12));
         let result = eval("x + 1".chars(), &mut state);
         assert_eq!(result, Ok(13));
-
     }
 
     #[test]
@@ -96,4 +117,5 @@ mod tests {
         assert_eq!(result, Ok(7));
     }
 }
+
 
