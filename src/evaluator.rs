@@ -27,8 +27,6 @@ impl PartialOrd for Operation {
             (Operation::Multiply | Operation::Divide, Operation::Multiply | Operation::Divide) => Some(Ordering::Equal),
             (Operation::UnaryPlus | Operation::BinaryPlus | Operation::UnaryMinus | Operation::BinaryMinus, Operation::Multiply | Operation::Divide) => Some(Ordering::Greater),
             (Operation::Multiply | Operation::Divide, Operation::UnaryPlus | Operation::BinaryPlus | Operation::UnaryMinus | Operation::BinaryMinus) => Some(Ordering::Less),
-            (Operation::OpenParenthesis, Operation::CloseParenthesis) => Some(Ordering::Equal),
-            (Operation::CloseParenthesis, Operation::OpenParenthesis) => Some(Ordering::Equal),
             (Operation::OpenParenthesis, _) => Some(Ordering::Greater),
             (Operation::CloseParenthesis, _) => Some(Ordering::Less),
             (_, Operation::OpenParenthesis) => Some(Ordering::Greater),
