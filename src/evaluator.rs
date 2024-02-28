@@ -45,7 +45,7 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) -> Result<(), Error> {
                 Node::Unary {
                     child: Box::new(prev),
                     sign: '+',
-                    strategy: |child, state| Ok(child.calculate(state)?),
+                    strategy: |child, state| Ok(child.eval(state)?),
                 }
             )
         }
@@ -55,7 +55,7 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) -> Result<(), Error> {
                 Node::Unary {
                     child: Box::new(prev),
                     sign: '-',
-                    strategy: |child, state| Ok(-child.calculate(state)?),
+                    strategy: |child, state| Ok(-child.eval(state)?),
                 }
             );
         }
@@ -67,8 +67,8 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) -> Result<(), Error> {
                 right: Box::new(prev_top),
                 sign: '+',
                 strategy: |left, right, state| {
-                    let l = left.calculate(state)?;
-                    let r = right.calculate(state)?;
+                    let l = left.eval(state)?;
+                    let r = right.eval(state)?;
                     Ok(l + r)
                 },
             });
@@ -81,8 +81,8 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) -> Result<(), Error> {
                 right: Box::new(prev_top),
                 sign: '-',
                 strategy: |left, right, state| {
-                    let l = left.calculate(state)?;
-                    let r = right.calculate(state)?;
+                    let l = left.eval(state)?;
+                    let r = right.eval(state)?;
                     Ok(l - r)
                 },
             });
@@ -95,8 +95,8 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) -> Result<(), Error> {
                 right: Box::new(prev_top),
                 sign: '*',
                 strategy: |left, right, state| {
-                    let l = left.calculate(state)?;
-                    let r = right.calculate(state)?;
+                    let l = left.eval(state)?;
+                    let r = right.eval(state)?;
                     Ok(l * r)
                 },
             });
@@ -109,8 +109,8 @@ fn collapse(operation: Operation, nodes: &mut Vec<Node>) -> Result<(), Error> {
                 right: Box::new(prev_top),
                 sign: '/',
                 strategy: |left, right, state| {
-                    let l = left.calculate(state)?;
-                    let r = right.calculate(state)?;
+                    let l = left.eval(state)?;
+                    let r = right.eval(state)?;
                     Ok(l / r)
                 },
             });
@@ -160,46 +160,35 @@ pub fn eval(expression: impl Iterator<Item = char>, state: &mut State) -> Result
     'outer: for token in tokens {
         let to_be_pushed;
         match (token, expect_operand) {
-            (Token::Operand(OperandsToken::Constant(number)), true) => {
-                nodes.push(Node::Constant {
-                    value: number
-                });
-                to_be_pushed = None;
-                expect_operand = false;
-            }
-            (Token::Operand(OperandsToken::Variable(name)), true) => {
+            (Token::Operand(operand), true) => {
                 nodes.push(
-                    Node::Variable {
-                        name
+                    match operand {
+                        OperandsToken::Constant(value) => Node::Constant { value },
+                        OperandsToken::Variable(name) => Node::Variable { name }
                     }
                 );
                 to_be_pushed = None;
                 expect_operand = false;
             }
-            (Token::Operation(OperationToken::Plus), true)  => {
-                to_be_pushed = Some(Operation::UnaryPlus);
+            (Token::Operation(operation), true) => {
+                match operation {
+                    OperationToken::Plus => to_be_pushed = Some(Operation::UnaryPlus),
+                    OperationToken::Minus => to_be_pushed = Some(Operation::UnaryMinus),
+                    _ => return Err(Error::InvalidSyntax),
+                }
+            }
+
+            (Token::Operation(operation), false) => {
+                match operation {
+                    OperationToken::Plus => to_be_pushed = Some(Operation::BinaryPlus),
+                    OperationToken::Minus => to_be_pushed = Some(Operation::BinaryMinus),
+                    OperationToken::Multiply => to_be_pushed = Some(Operation::Multiply),
+                    OperationToken::Divide => to_be_pushed = Some(Operation::Divide),
+                    OperationToken::Assign => to_be_pushed = Some(Operation::Assign),
+                }
                 expect_operand = true;
             }
-            (Token::Operation(OperationToken::Plus), false)  => {
-                to_be_pushed = Some(Operation::BinaryPlus);
-                expect_operand = true;
-            }
-            (Token::Operation(OperationToken::Minus), true) => {
-                to_be_pushed = Some(Operation::UnaryMinus);
-                expect_operand = true;
-            },
-            (Token::Operation(OperationToken::Minus), false) => {
-                to_be_pushed = Some(Operation::BinaryMinus);
-                expect_operand = true;
-            },
-            (Token::Operation(OperationToken::Multiply), false) => {
-                to_be_pushed = Some(Operation::Multiply);
-                expect_operand = true;
-            },
-            (Token::Operation(OperationToken::Divide), false) => {
-                to_be_pushed = Some(Operation::Divide);
-                expect_operand = true;
-            },
+
             (Token::OpenParenthesis, true) => {
                 to_be_pushed = Some(Operation::OpenParenthesis);
                 expect_operand = true;
@@ -208,14 +197,8 @@ pub fn eval(expression: impl Iterator<Item = char>, state: &mut State) -> Result
                 to_be_pushed = Some(Operation::CloseParenthesis);
                 expect_operand = false;
             },
-            (Token::Operation(OperationToken::Assign), false) => {
-                to_be_pushed = Some(Operation::Assign);
-                expect_operand = true;
-            }
 
-            (_, _) => {
-                return Err(Error::InvalidSyntax);
-            }
+            (_, _) => return Err(Error::InvalidSyntax),
         }
 
         while let (Some(&x), Some(y)) = (operations.last(), to_be_pushed) {
@@ -256,6 +239,6 @@ pub fn eval(expression: impl Iterator<Item = char>, state: &mut State) -> Result
     }
 
 
-    nodes.pop().ok_or(Error::InvalidSyntax)?.calculate(state)
+    nodes.pop().ok_or(Error::InvalidSyntax)?.eval(state)
 
 }
